@@ -1,0 +1,36 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (nunca commitar senhas/tokens)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Build / output
+dist/
+build/
+frontend/dist/
+backend/dist/
+*.tsbuildinfo
+
+# Vite
+frontend/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema / IDE
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Testes / cobertura
+coverage/
+.nyc_output/
+
+# Prisma (opcional: descomente se não quiser subir o schema)
+# backend/prisma/*.db
+# backend/prisma/*.db-journal

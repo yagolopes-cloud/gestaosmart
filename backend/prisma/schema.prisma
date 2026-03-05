@@ -1,0 +1,196 @@
+// Prisma schema - SQLite local (usuário e ajustes). Pedidos vêm do SQL que você colar (Nomus read-only).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DB_URL")
+}
+
+// Tabela auxiliar para ajustes manuais de previsão de entrega (histórico)
+model PedidoPrevisaoAjuste {
+  id            Int      @id @default(autoincrement())
+  id_pedido     String   // ID do pedido no ERP (varchar para compatibilidade)
+  previsao_nova DateTime
+  motivo        String
+  observacao    String?
+  usuario       String
+  data_ajuste   DateTime @default(now())
+
+  @@index([id_pedido])
+  @@index([data_ajuste])
+  @@map("pedido_previsao_ajuste")
+}
+
+model MotivoSugestao {
+  id        Int      @id @default(autoincrement())
+  descricao String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Motivos da alteração da data de entrega do pedido de compra (Integração Nomus) – cadastro separado da aba Pedidos
+model MotivoAlteracaoDataEntregaCompra {
+  id        Int      @id @default(autoincrement())
+  descricao String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("motivo_alteracao_data_entrega_compra")
+}
+
+// Grupo de usuários: define permissões de acesso
+model GrupoUsuario {
+  id          Int      @id @default(autoincrement())
+  nome        String   @unique
+  descricao   String?
+  permissoes  String   // JSON array: ["dashboard.ver", "pedidos.ver", ...]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  usuarios Usuario[]
+
+  @@map("grupo_usuario")
+}
+
+// Usuário para autenticação (login/senha) - tabela local do app
+model Usuario {
+  id        Int          @id @default(autoincrement())
+  login     String       @unique
+  senhaHash String
+  nome      String?
+  grupoId   Int?
+  fotoUrl   String? // Foto do usuário (data URL base64 ou URL). Opcional.
+  createdAt DateTime     @default(now())
+
+  grupo GrupoUsuario? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+
+  @@map("usuario")
+}
+
+// Configuração persistida (ex.: Evolution WhatsApp – instância e número para envio)
+model Config {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+
+  @@map("config")
+}
+
+// Coordenadas de municípios brasileiros (fonte: IBGE/kelvins – sem depender de API externa)
+model MunicipioCoordenada {
+  id               Int    @id @default(autoincrement())
+  nome_normalizado String // nome sem acentos, minúsculo, para comparação
+  uf               String // sigla: MA, PI, etc.
+  lat              Float
+  lng              Float
+
+  @@unique([nome_normalizado, uf])
+  @@index([nome_normalizado, uf])
+  @@map("municipio_coordenada")
+}
+
+// Coleta de preços: uma confirmação de seleção no modal (idProduto do Nomus)
+// Histórico de alteração de data de entrega do item de pedido de compra (Nomus). Gravado no banco do projeto.
+model PedidoCompraDataEntregaAlteracao {
+  id                   Int      @id @default(autoincrement())
+  idItemPedidoCompra   Int      // id do item no Nomus (itempedidocompra.id)
+  dataEntregaAnterior  String   // data antes da alteração (YYYY-MM-DD)
+  dataEntregaNova      String   // data após alteração (YYYY-MM-DD)
+  motivo               String
+  observacao           String?
+  usuario              String   // login de quem alterou
+  dataAlteracao        DateTime @default(now())
+
+  @@index([idItemPedidoCompra])
+  @@index([dataAlteracao])
+  @@map("pedido_compra_data_entrega_alteracao")
+}
+
+model ColetaPrecos {
+  id                  Int       @id @default(autoincrement())
+  createdAt           DateTime  @default(now())
+  usuarioCriacao      String?   // login do usuário que criou a coleta
+  fornecedores        String?   // JSON array de até 6 nomes de fornecedores da cotação
+  status                      String?   @default("Em cotação") // "Em cotação" | "Em Aprovação" | "Rejeitada" | "Finalizada" | "Enviado para Financeiro"
+  dataEnvioAprovacao          DateTime?  // quando foi enviado para aprovação (zerado ao reabrir)
+  jaEnviadaAprovacao          Boolean   @default(false) // true assim que foi enviada para aprovação uma vez; nunca volta a false (bloqueia exclusão)
+  justificativaCancelamento  String?   // justificativa ao cancelar (reverter) aprovação
+  dataCancelamento           DateTime?  // quando foi cancelada a aprovação
+  dataFinalizacao            DateTime?  // quando foi finalizada ou enviada ao financeiro (para cálculo de tempo em cotação)
+  observacoes                 String?   // observações da coleta (texto longo); exibido no mapa de cotação
+  dataUltimaMovimentacao     DateTime?  // última alteração (status, cotação, itens etc.); usado na regra de 72h para bloquear nova coleta
+
+  itens       ColetaPrecosItem[]
+  registros   ColetaPrecosRegistro[]
+  cotacoes    ColetaPrecosCotacao[]
+  ciencias    ColetaPrecosCiencia[]
+
+  @@map("coleta_precos")
+}
+
+// Ciência dada pelo usuário para coleta com mais de 72h em aberto (desbloqueia criar nova coleta)
+model ColetaPrecosCiencia {
+  id             Int      @id @default(autoincrement())
+  coletaPrecosId Int
+  justificativa  String   // motivo do período em aberto
+  usuario        String   // login de quem deu a ciência
+  createdAt      DateTime @default(now())
+
+  coletaPrecos ColetaPrecos @relation(fields: [coletaPrecosId], references: [id], onDelete: Cascade)
+
+  @@index([coletaPrecosId])
+  @@map("coleta_precos_ciencia")
+}
+
+model ColetaPrecosItem {
+  id             Int          @id @default(autoincrement())
+  coletaPrecosId Int
+  idProduto      Int          // id do produto no Nomus
+  idSolicitacao  Int?         // id da solicitação de compra no Nomus (quando vinculado)
+
+  coletaPrecos ColetaPrecos @relation(fields: [coletaPrecosId], references: [id], onDelete: Cascade)
+
+  @@index([coletaPrecosId])
+  @@index([idProduto])
+  @@map("coleta_precos_item")
+}
+
+// Registros retornados pelo SQL de coleta no Nomus (uma linha por item: produto + solicitação escolhida)
+model ColetaPrecosRegistro {
+  id                  Int     @id @default(autoincrement())
+  coletaPrecosId      Int
+  idProduto           Int     // Id Produto do Nomus
+  idSolicitacao       Int?    // Id da solicitação no Nomus (quando vinculado)
+  dados               String  // JSON com todas as colunas do SQL (para uso em condições)
+  qtdeAprovada        Float?  // Quantidade aprovada pela diretoria (obrigatória para finalizar)
+  idFornecedorVencedor Int?   // idPessoa do fornecedor vencedor do item (obrigatório para finalizar, exceto itens cancelados)
+
+  coletaPrecos ColetaPrecos @relation(fields: [coletaPrecosId], references: [id], onDelete: Cascade)
+
+  @@index([coletaPrecosId])
+  @@index([idProduto])
+  @@map("coleta_precos_registro")
+}
+
+// Preços cadastrados por produto/fornecedor na cotação (popup Cadastrar preços)
+model ColetaPrecosCotacao {
+  id             Int     @id @default(autoincrement())
+  coletaPrecosId Int
+  idProduto      Int     // Id Produto do Nomus
+  idFornecedor   Int     // idPessoa do fornecedor
+  precoNF        Float
+  percICMS       Float
+  percPIS        Float
+  percIPI        Float
+  percCOFINS     Float
+  precoTotal     Float
+
+  coletaPrecos ColetaPrecos @relation(fields: [coletaPrecosId], references: [id], onDelete: Cascade)
+
+  @@unique([coletaPrecosId, idProduto, idFornecedor])
+  @@index([coletaPrecosId])
+  @@index([idProduto])
+  @@map("coleta_precos_cotacao")
+}

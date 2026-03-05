@@ -1,0 +1,35 @@
+=== DEPLOY NA VPS WINDOWS ===
+
+1. Copie toda a pasta _vps-deploy para a VPS (ex: C:\gestorpedidos)
+
+2. Crie o arquivo .env na pasta backend:
+   - Copie backend\.env.example para backend\.env
+   - Edite backend\.env com suas configs (DB_URL, NOMUS_DB_URL, JWT_SECRET)
+   - Acesso externo (170.84.146.147, porta liberada no MikroTik):
+     APP_PORT=5174
+     NODE_ENV=production
+     FRONTEND_ORIGIN=http://170.84.146.147:5174
+
+3. Build do frontend + backend (uma vez antes de subir):
+   - cd frontend && npm run build
+   - cd ../backend && node scripts/copy-frontend.js
+   - cd backend && npm run build
+   Ou, na pasta backend: npm run build:frontend (se tiver frontend na pasta irmã)
+
+4. Execute instalar-e-rodar.bat (clique duplo ou no terminal)
+   - Instala dependências, compila e inicia o servidor
+
+5. Acesse no navegador (de outro PC): http://170.84.146.147:5174
+
+Requisitos: Node.js 18+ instalado na VPS.
+
+--- Acesso externo (IP 170.84.146.147) ---
+Se não conseguir acessar de outro PC:
+
+1. Libere as portas no Firewall do Windows:
+   - Clique direito em liberar-porta-3000-firewall.bat > "Executar como administrador"
+   - Isso libera as portas 3000, 5173 e 5174.
+
+2. Acesso externo: use APP_PORT=5174 no .env (porta liberada no MikroTik). Acesse: http://170.84.146.147:5174
+
+3. No MikroTik: encaminhe a porta 5174 (externa) para o IP desta máquina, porta 5174.

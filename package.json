@@ -1,0 +1,20 @@
+{
+  "name": "gestorpedidos-soaco",
+  "private": true,
+  "description": "Gestor de Pedidos — interno: 5180, externo: 5174, API: 4000.",
+  "scripts": {
+    "predev": "node scripts/kill-ports.cjs",
+    "dev": "concurrently -k -n api,fe,watchdog -c blue,green,magenta \"npm run dev:backend\" \"npm run dev:wait-fe\" \"node scripts/watchdog-backend.cjs\"",
+    "dev:wait-fe": "wait-on -t 45000 http://127.0.0.1:4000/health && concurrently -n interno,externo -c green,yellow \"npm run dev:frontend\" \"npm run dev:frontend:externo\"",
+    "dev:full": "npm install && npm run dev:full:backend && npm run dev:full:frontend && npm run dev",
+    "dev:full:backend": "npm install --prefix backend && npm run generate --prefix backend",
+    "dev:full:frontend": "npm install --prefix frontend",
+    "dev:backend": "node scripts/run-backend-loop.cjs",
+    "dev:frontend": "npm run dev --prefix frontend -- --port 5180",
+    "dev:frontend:externo": "npm run dev --prefix frontend -- --port 5174"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "wait-on": "^8.0.1"
+  }
+}

@@ -1,0 +1,18 @@
+---
+description: Reiniciar backend e frontend após alterações solicitadas pelo usuário
+alwaysApply: true
+---
+
+# Reinício automático dos servidores
+
+Quando o usuário solicitar **qualquer alteração** (código, configuração, etc.) e você aplicar mudanças no projeto:
+
+1. **Ao finalizar as alterações**, reinicie os servidores **sem perguntar**:
+   - Encerre os processos nas portas **4000** (backend), **5180** (interno) e **5174** (externo).
+   - Inicie na raiz: `npm run dev` (sobe backend + frontend 5180 + frontend 5174 em background).
+
+2. Use PowerShell: para encadear use `;`. Para encerrar: `Get-NetTCPConnection -LocalPort 4000,5180,5174` e `Stop-Process`.
+
+3. O backend é iniciado via `scripts/run-backend-loop.cjs`, que **reinicia o processo automaticamente** se ele cair (após 2 s).
+
+4. **Não pergunte** se o usuário quer reiniciar; faça-o automaticamente após as alterações.

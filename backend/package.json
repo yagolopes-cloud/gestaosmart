@@ -1,0 +1,56 @@
+{
+  "name": "gestor-pedidos-backend",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "API backend para gestão de previsão de entrega de pedidos (Nomus ERP)",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "cross-env APP_PORT=4000 tsx watch src/server.ts",
+    "build": "tsc && node -e \"require('fs').mkdirSync('dist/data',{recursive:true}); require('fs').copyFileSync('src/data/sqlBasePedidosNomus.sql','dist/data/sqlBasePedidosNomus.sql')\"",
+    "build:frontend": "cd ../frontend && npm run build && cd ../backend && node scripts/copy-frontend.cjs",
+    "start": "node dist/server.js",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "generate": "prisma generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed": "tsx prisma/seed.ts",
+    "seed:municipios": "tsx prisma/seed-municipios.ts",
+    "fix:datas-ajuste": "tsx scripts/normalizar-datas-pedido-previsao-ajuste.ts",
+    "limpar-coletas-precos": "tsx scripts/limpar-coletas-precos.ts",
+    "coleta-teste-72h": "tsx scripts/coleta-teste-72h.ts",
+    "coleta-desfazer-teste-72h": "tsx scripts/coleta-desfazer-teste-72h.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@types/qrcode": "^1.5.6",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.0",
+    "qrcode": "^1.5.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.9.0",
+    "@types/supertest": "^6.0.2",
+    "cross-env": "^10.1.0",
+    "prisma": "^5.22.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}
